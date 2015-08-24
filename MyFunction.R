@@ -521,33 +521,27 @@ Order <- function(data){
 
 IndustryShow <- function(industry_value, half_life, valuename){
   
-  names(industry_value) <- c("Start", "IndustryNameNew","IndustryValue",
-                             "UnSespendedFloatMarketCap", "IndustryReturn", "SespendedFloatMarketCap")
+  names(industry_value) <- c("TradingDay", "IndustryNameNew","IndustryValue",
+                             "IndustryReturn", "FloatMarketCap")
   
   portfolio <- industry_value %>%
     group_by(IndustryNameNew) %>%
-    arrange(Start) %>%
+    arrange(TradingDay) %>%
     mutate(IndustryValueScore =  Score(IndustryValue, half_life)) %>%
     filter(!is.na(IndustryValueScore)) %>%
-    group_by(Start) %>%
+    group_by(TradingDay) %>%
     mutate(Order = Order(IndustryValueScore)) %>% 
-    group_by(Start, Order) %>%
-    summarise(PortfolioReturn_equal = mean(IndustryReturn),
-              PortfolioReturn_Sespended = weighted.mean(IndustryReturn, SespendedFloatMarketCap),
-              PortfolioReturn_UnSespended = weighted.mean(IndustryReturn, UnSespendedFloatMarketCap)) %>%
+    group_by(TradingDay, Order) %>%
+    summarise(Return = weighted.mean(IndustryReturn, FloatMarketCap)) %>%
     group_by(Order) %>%
-    arrange(Start) %>%
-    mutate(Equal = expm1(cumsum(log1p(PortfolioReturn_equal))),
-           Sespended = expm1(cumsum(log1p(PortfolioReturn_Sespended))),
-           UnSespended = expm1(cumsum(log1p(PortfolioReturn_UnSespended)))) %>%
-    ungroup() %>% 
-    melt(id = c("Start", "Order"), measure = c("Equal", "Sespended", "UnSespended"))
+    arrange(TradingDay) %>%
+    mutate(CumulateReturn = expm1(cumsum(log1p(Return)))) %>%
+    ungroup() 
   
   
-  print(ggplot(portfolio, aes(x = Start, y =  value, color = Order)) + geom_line() +
+  print(ggplot(portfolio, aes(x = TradingDay, y =  CumulateReturn, color = Order)) + geom_line() +
           ggtitle(paste(valuename, half_life)) +
-          xlab(NULL) + ylab(NULL) +
-          facet_grid(variable ~ .))
+          xlab(NULL) + ylab(NULL))
 }
 
 
