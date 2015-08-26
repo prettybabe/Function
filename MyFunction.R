@@ -524,7 +524,7 @@ IndustryShow <- function(industry_value, half_life, valuename){
   names(industry_value) <- c("TradingDay", "IndustryNameNew","IndustryValue",
                              "IndustryReturn", "FloatMarketCap")
   
-  portfolio <- industry_value %>%
+  portfolio <-a <- industry_value %>%
     group_by(IndustryNameNew) %>%
     arrange(TradingDay) %>%
     mutate(IndustryValueScore =  Score(IndustryValue, half_life)) %>%
@@ -545,3 +545,106 @@ IndustryShow <- function(industry_value, half_life, valuename){
 }
 
 
+IndustryReturn <- function(data, nIndexCode, startdate, enddate, frequency){
+  
+  if(frequency == "Monthly"){
+    trading_date <- data$TradingDay %>%
+      filter(IfMonthEnd == 1)
+  }else{
+    trading_date <- data$TradingDay %>%
+      filter(IfWeekEnd == 1)
+  }
+  
+  trading_date <- trading_date %>% 
+    filter(TradingDate >= startdate & TradingDate <= enddate) %>%
+    select(TradingDate) %>%
+    mutate(Start = lag(TradingDate)) %>%
+    rename(End =  TradingDate) %>%
+    select(Start, End) %>%
+    na.omit()
+  
+  industry_return <- data.frame()
+  for(i in c(1:nrow(trading_date))){
+    start <- trading_date[[i, 1]]
+    end <- trading_date[[i, 2]]
+    temp <- data$ReturnDaily %>%
+      filter(TradingDay == start) %>% # 筛选日期
+      semi_join(data$IndexComponent %>% 
+                  filter(IndexInnerCode == nIndexCode, start >= InDate & start < OutDate),
+                by = c("InnerCode" = "SecuInnerCode"))
+    
+    industry_return_temp <- temp %>%
+      filter(IfSuspended == 0) %>%
+      inner_join(data$ReturnDaily %>% 
+                   filter(TradingDay > start & TradingDay <= end) %>%
+                   select(InnerCode, DailyReturn), by = "InnerCode") %>% 
+      group_by(InnerCode, FloatMarketCap, IndustryNameNew) %>% 
+      summarise(StockReturn = expm1(sum(log1p(DailyReturn.y)))) %>%
+      group_by(IndustryNameNew) %>% 
+      summarise(IndustryReturn = weighted.mean(StockReturn, FloatMarketCap),
+                FloatMarketCap = sum(FloatMarketCap)) %>%
+      ungroup() %>% 
+      mutate(TradingDay = start)
+    
+    industry_return <- rbind(industry_return, industry_return_temp)
+  }
+  
+  return(industry_return)
+}
+
+IndexReturn <- function(data, startdate, enddate, frequency){
+  if(frequency == "Monthly"){
+    trading_date <- data$TradingDay %>%
+      filter(IfMonthEnd == 1)
+  }else{
+    trading_date <- data$TradingDay %>%
+      filter(IfWeekEnd == 1)
+  }
+  
+  trading_date <- trading_date %>% 
+    filter(TradingDate >= startdate & TradingDate <= enddate) %>%
+    select(TradingDate) %>%
+    mutate(Start = lag(TradingDate)) %>%
+    rename(End =  TradingDate) %>%
+    select(Start, End) %>%
+    na.omit()
+  
+  
+  index_return <- data.frame()
+  for(i in c(1:nrow(trading_date))){
+    start <- trading_date[[i, 1]]
+    end <- trading_date[[i, 2]]
+    index_return_temp <- data$SecuMainIndex %>% 
+      filter(TradingDay > start & TradingDay <= end) %>% 
+      group_by(InnerCode) %>% 
+      summarise(IndexReturn = expm1(sum(log(ClosePrice/PrevClosePrice)))) %>% 
+      mutate(TradingDay = start)
+    
+    index_return <- rbind(index_return, index_return_temp)
+  }
+  
+  return(index_return)
+}
+
+
+
+TradingDay <- function(data, startdate, enddate, frequency){
+  
+  if(frequency == "Monthly"){
+    trading_date <- data$TradingDay %>%
+      filter(IfMonthEnd == 1)
+  }else{
+    trading_date <- data$TradingDay %>%
+      filter(IfWeekEnd == 1)
+  }
+  
+  trading_date <- trading_date %>% 
+    filter(TradingDate >= startdate & TradingDate <= enddate) %>%
+    select(TradingDate) %>%
+    mutate(Start = lag(TradingDate)) %>%
+    rename(End =  TradingDate) %>%
+    select(Start, End) %>%
+    na.omit()
+  
+  return(trading_date)
+}
