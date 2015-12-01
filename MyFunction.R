@@ -34,7 +34,6 @@ Sum <- function(Data, Days){
   return(Sum)
 }
 
-
 Fill <- function(Data, Days){
   Data <- as.vector(Data)
   Fill <- Data
@@ -63,7 +62,6 @@ AdjustUSA <- function(China, USA){
   return(NewDate)
 }
 
-
 Score <- function(Data, ScoreNumber, IsMinusMean = 1){
   Data <- as.vector(Data)
   Score <- vector()
@@ -80,7 +78,6 @@ Score <- function(Data, ScoreNumber, IsMinusMean = 1){
   }
   return(Score)
 }
-
 
 Count <- function(Data, Index, SumNumber = 8){
   count <- ifelse(Data*Index > 0, 1, 0)
@@ -172,7 +169,6 @@ Performance <- function(Data, kNumber){
   print(p4)
 }
 
-
 MaxDropDownRatio <-  function(returns){
   maxdropdown <- 0
   cum.return <- cumsum(log1p(returns))
@@ -247,7 +243,6 @@ Show <- function(forecast, index, date, knumber = 52){
  
   Performance(returns %>%  select(Date = ForecastDate, Return, LongOnly, LongShort), knumber)
 }
-
 
 PerformanceCompare <- function(forecast, index, date, knumber = 52){
   names(index) <- c("Date", "Return")
@@ -326,7 +321,6 @@ PerformanceCompare <- function(forecast, index, date, knumber = 52){
   print(b)
 }
 
-
 DailyReturnToMonthReturn <- function(Data){
   # Data format  Date DailyReturn
   names(Data) <- c("Date", "Return") 
@@ -339,7 +333,6 @@ DailyReturnToMonthReturn <- function(Data){
     summarise(Return = expm1(sum(log1p(Return))))
   return(MonthReturn)
 }
-
 
 Rsquare <- function(IndexCode, Date){
   options(java.parameters="-Xmx4g")
@@ -392,7 +385,6 @@ Rsquare <- function(IndexCode, Date){
   
   return(rsquare$Rsquare)
 } 
-
 
 EP <- function(IndexCode, Date){
   options(java.parameters="-Xmx4g")
@@ -521,11 +513,11 @@ Order <- function(data){
 
 IndustryShow <- function(industry_value, half_life, valuename){
   
-  names(industry_value) <- c("TradingDay", "IndustryNameNew","IndustryValue",
+  names(industry_value) <- c("TradingDay", "IndustryName","IndustryValue",
                              "IndustryReturn", "FloatMarketCap")
   
   portfolio <-a <- industry_value %>%
-    group_by(IndustryNameNew) %>%
+    group_by(IndustryName) %>%
     arrange(TradingDay) %>%
     mutate(IndustryValueScore =  Score(IndustryValue, half_life)) %>%
     filter(!is.na(IndustryValueScore)) %>%
@@ -543,7 +535,6 @@ IndustryShow <- function(industry_value, half_life, valuename){
           ggtitle(paste(valuename, half_life)) +
           xlab(NULL) + ylab(NULL))
 }
-
 
 IndustryReturn <- function(data, nIndexCode, startdate, enddate, frequency){
   
@@ -578,9 +569,9 @@ IndustryReturn <- function(data, nIndexCode, startdate, enddate, frequency){
       inner_join(data$ReturnDaily %>% 
                    filter(TradingDay > start & TradingDay <= end) %>%
                    select(InnerCode, DailyReturn), by = "InnerCode") %>% 
-      group_by(InnerCode, FloatMarketCap, IndustryNameNew) %>% 
+      group_by(InnerCode, FloatMarketCap, IndustryName) %>% 
       summarise(StockReturn = expm1(sum(log1p(DailyReturn.y)))) %>%
-      group_by(IndustryNameNew) %>% 
+      group_by(IndustryName) %>% 
       summarise(IndustryReturn = weighted.mean(StockReturn, FloatMarketCap),
                 FloatMarketCap = sum(FloatMarketCap)) %>%
       ungroup() %>% 
@@ -618,15 +609,13 @@ IndexReturn <- function(data, startdate, enddate, frequency){
       filter(TradingDay > start & TradingDay <= end) %>% 
       group_by(InnerCode) %>% 
       summarise(IndexReturn = expm1(sum(log(ClosePrice/PrevClosePrice)))) %>% 
-      mutate(TradingDay = start)
+      mutate(TradingDay = end)
     
     index_return <- rbind(index_return, index_return_temp)
   }
   
   return(index_return)
 }
-
-
 
 TradingDay <- function(data, startdate, enddate, frequency){
   
